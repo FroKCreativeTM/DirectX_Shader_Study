@@ -14,6 +14,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ch03_Texture_mapping", "Ch0
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ch04_Normal_mapping", "Ch04_Normal_mapping\Ch04_Normal_mapping.vcxproj", "{8C02FBA0-2162-4A28-B49E-3A5EAC84B9D4}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ch05_Texture_With_Light", "Ch05_Texture_With_Light\Ch05_Texture_With_Light.vcxproj", "{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -46,6 +48,14 @@ Global
 		{8C02FBA0-2162-4A28-B49E-3A5EAC84B9D4}.Release|x64.Build.0 = Release|x64
 		{8C02FBA0-2162-4A28-B49E-3A5EAC84B9D4}.Release|x86.ActiveCfg = Release|Win32
 		{8C02FBA0-2162-4A28-B49E-3A5EAC84B9D4}.Release|x86.Build.0 = Release|Win32
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Debug|x64.ActiveCfg = Debug|x64
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Debug|x64.Build.0 = Debug|x64
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Debug|x86.ActiveCfg = Debug|Win32
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Debug|x86.Build.0 = Debug|Win32
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Release|x64.ActiveCfg = Release|x64
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Release|x64.Build.0 = Release|x64
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Release|x86.ActiveCfg = Release|Win32
+		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
