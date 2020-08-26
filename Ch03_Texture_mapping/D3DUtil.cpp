@@ -11,7 +11,12 @@ ID3DXFont*              gpFont			= NULL;
 // 모델
 LPD3DXMESH				gpSphere		= NULL;
 // 쉐이더
-LPD3DXEFFECT			gpColorShader	= NULL;
+LPD3DXEFFECT			g_pTextureMappingShader	= nullptr;
+// 텍스처
+LPDIRECT3DTEXTURE9		g_pEarthDM				= nullptr;
+
+// 회전을 위한 회전값
+float g_RotationY = 0.0f;
 
 // 메시지 처리기
 LRESULT WINAPI MsgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -63,7 +68,7 @@ void Update()
 
 void RenderFrame()
 {
-	D3DCOLOR bgColour = 0xDEDEFFFF;	// 배경색상 - 파랑
+	D3DCOLOR bgColour = 0x005289FF;	// 배경색상 - 파랑
 
 	gpD3DDevice->Clear(0, NULL, (D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER), bgColour, 1.0f, 0);
 
@@ -92,32 +97,45 @@ void RenderScene()
 	D3DXMATRIXA16			matProjection;
 	D3DXMatrixPerspectiveFovLH(&matProjection, FOV, ASPECT_RATIO, NEAR_PLANE, FAR_PLANE);
 
+
 	// 월드행렬을 만든다.
 	D3DXMATRIXA16			matWorld;
 	D3DXMatrixIdentity(&matWorld);
 
+	// 회전한다.
+	g_RotationY += 0.4f * PI / 180.0f;
+	if (g_RotationY > 2 * PI)
+	{
+		g_RotationY -= 2 * PI;
+	}
+	D3DXMatrixRotationY(&matWorld, g_RotationY);
+
 	// 쉐이더 전역변수들을 설정
-	gpColorShader->SetMatrix("g_worldMatrix", &matWorld);
-	gpColorShader->SetMatrix("g_viewMatrix", &matView);
-	gpColorShader->SetMatrix("g_projectionMatrix", &matProjection);
+	g_pTextureMappingShader->SetMatrix("g_worldMatrix", &matWorld);
+	g_pTextureMappingShader->SetMatrix("g_viewMatrix", &matView);
+	g_pTextureMappingShader->SetMatrix("g_projectionMatrix", &matProjection);
+
+	// 텍스처를 입힌다.
+	g_pTextureMappingShader->SetTexture("DiffuseMap_Tex", g_pEarthDM);
+
 
 	// 쉐이더를 시작한다.
 	// 앞으로 그릴 모든 물체에 이 쉐이더를 적용할 것이란 뜻
 	UINT numPasses = 0;
-	gpColorShader->Begin(&numPasses, NULL);
+	g_pTextureMappingShader->Begin(&numPasses, NULL);
 	{
 		for (UINT i = 0; i < numPasses; ++i)
 		{
-			gpColorShader->BeginPass(i);
+			g_pTextureMappingShader->BeginPass(i);
 			{
 				// 구체를 그린다.
 				gpSphere->DrawSubset(0);
 			}
-			gpColorShader->EndPass();
+			g_pTextureMappingShader->EndPass();
 		}
 	}
 	// 이 쉐이더를 적용하는 것을 끝내라
-	gpColorShader->End();
+	g_pTextureMappingShader->End();
 }
 
 // 디버그 정보 등을 출력.
@@ -207,11 +225,9 @@ bool InitD3D(HWND hWnd)
 
 bool LoadAssets()
 {
-	// 텍스처 로딩
-
 	// 쉐이더 로딩
-	gpColorShader = LoadShader("ColorShader.fx");
-	if (!gpColorShader)
+	g_pTextureMappingShader = LoadShader("TextureMapping.fx");
+	if (!g_pTextureMappingShader)
 	{
 		return false;
 	}
@@ -219,6 +235,13 @@ bool LoadAssets()
 	// 모델 로딩
 	gpSphere = LoadModel("sphere.x");
 	if (!gpSphere)
+	{
+		return false;
+	}
+
+	g_pEarthDM = LoadTexture("EarthNight.jpg");
+	// 텍스처 로딩
+	if (!g_pEarthDM)
 	{
 		return false;
 	}
@@ -308,13 +331,18 @@ void Cleanup()
 	}
 
 	// 쉐이더를 release 한다.
-	if (gpColorShader)
+	if (g_pTextureMappingShader)
 	{
-		gpColorShader->Release();
-		gpColorShader = NULL;
+		g_pTextureMappingShader->Release();
+		g_pTextureMappingShader = nullptr;
 	}
 
 	// 텍스처를 release 한다.
+	if (g_pEarthDM)
+	{
+		g_pEarthDM->Release();
+		g_pEarthDM = nullptr;
+	}
 
 	// D3D를 release 한다.
 	if (gpD3DDevice)

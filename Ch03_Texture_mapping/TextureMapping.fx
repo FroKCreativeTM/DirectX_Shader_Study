@@ -15,28 +15,30 @@
 //**************************************************************//
 
 //--------------------------------------------------------------//
-// ColorShader
+// TextureMapping
 //--------------------------------------------------------------//
 //--------------------------------------------------------------//
 // Pass 0
 //--------------------------------------------------------------//
-string ColorShader_Pass_0_Model : ModelData = ".\\sphere.x";
+string TextureMapping_Pass_0_Model : ModelData = ".\\sphere.x";
 
 struct VS_INPUT
 {
    float4 m_Position : POSITION;
+   float2 m_TexCoord : TEXCOORD0;
 };
 
 struct VS_OUTPUT
 {
    float4 m_Position : POSITION;
+   float2 m_TexCoord : TEXCOORD0;
 };
 
 float4x4 g_worldMatrix : World;
 float4x4 g_projectionMatrix : Projection;
 float4x4 g_viewMatrix : View;
 
-VS_OUTPUT ColorShader_Pass_0_Vertex_Shader_vs_main(VS_INPUT Input)
+VS_OUTPUT TextureMapping_Pass_0_Vertex_Shader_vs_main(VS_INPUT Input)
 {
    VS_OUTPUT Output;
    
@@ -44,21 +46,37 @@ VS_OUTPUT ColorShader_Pass_0_Vertex_Shader_vs_main(VS_INPUT Input)
    Output.m_Position = mul(Output.m_Position, g_viewMatrix);
    Output.m_Position = mul(Output.m_Position, g_projectionMatrix);
    
+   Output.m_TexCoord = Input.m_TexCoord;
+   
    return Output;
 }
-float4 ColorShader_Pass_0_Pixel_Shader_ps_main() : COLOR
+texture DiffuseMap_Tex
+<
+   string ResourceName = "..\\..\\..\\..\\..\\..\\Program Files (x86)\\AMD\\RenderMonkey 1.82\\Examples\\Media\\Textures\\EarthNight.jpg";
+>;
+sampler2D DiffuseSampler = sampler_state
 {
-   return float4(1.0f, 0.0f, 0.0f, 1.0f);
+   Texture = (DiffuseMap_Tex);
+};
+struct PS_INPUT
+{
+   float2 m_TexCoord : TEXCOORD0;
+};
+
+float4 TextureMapping_Pass_0_Pixel_Shader_ps_main(PS_INPUT Input) : COLOR
+{
+   float4 albedo = tex2D(DiffuseSampler, Input.m_TexCoord);
+   return albedo.rgba;
 }
 //--------------------------------------------------------------//
-// Technique Section for ColorShader
+// Technique Section for TextureMapping
 //--------------------------------------------------------------//
-technique ColorShader
+technique TextureMapping
 {
    pass Pass_0
    {
-      VertexShader = compile vs_2_0 ColorShader_Pass_0_Vertex_Shader_vs_main();
-      PixelShader = compile ps_2_0 ColorShader_Pass_0_Pixel_Shader_ps_main();
+      VertexShader = compile vs_2_0 TextureMapping_Pass_0_Vertex_Shader_vs_main();
+      PixelShader = compile ps_2_0 TextureMapping_Pass_0_Pixel_Shader_ps_main();
    }
 
 }
