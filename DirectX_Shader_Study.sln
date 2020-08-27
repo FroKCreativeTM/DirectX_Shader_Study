@@ -16,6 +16,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ch04_Normal_mapping", "Ch04
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ch05_Texture_With_Light", "Ch05_Texture_With_Light\Ch05_Texture_With_Light.vcxproj", "{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Ch06_Toon_Shader", "Ch06_Toon_Shader\Ch06_Toon_Shader.vcxproj", "{BF441355-A1F7-445F-B066-51104A794CEA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -56,6 +58,14 @@ Global
 		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Release|x64.Build.0 = Release|x64
 		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Release|x86.ActiveCfg = Release|Win32
 		{AE9012B4-A18C-48B7-BA6C-9C55CA655C89}.Release|x86.Build.0 = Release|Win32
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Debug|x64.ActiveCfg = Debug|x64
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Debug|x64.Build.0 = Debug|x64
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Debug|x86.ActiveCfg = Debug|Win32
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Debug|x86.Build.0 = Debug|Win32
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Release|x64.ActiveCfg = Release|x64
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Release|x64.Build.0 = Release|x64
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Release|x86.ActiveCfg = Release|Win32
+		{BF441355-A1F7-445F-B066-51104A794CEA}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
