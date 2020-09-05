@@ -1,5 +1,7 @@
 #include "D3DUtil.h"
 
+#pragma warning(disable:4996)
+
 //----------------------------------------------------------------------
 // 전역변수
 //----------------------------------------------------------------------
@@ -9,18 +11,23 @@ LPDIRECT3DDEVICE9       gpD3DDevice		= NULL;				// D3D 장치
 // 폰트
 ID3DXFont*              gpFont			= NULL;
 // 모델
-LPD3DXMESH				g_pTorus		= nullptr;
+LPD3DXMESH				g_pTorus = nullptr;
+LPD3DXMESH				g_pDisc		= nullptr;
 // 쉐이더
-LPD3DXEFFECT			g_pUVAnimationShader	= nullptr;
+LPD3DXEFFECT			g_pApplyShadowShader	= nullptr;
+LPD3DXEFFECT			g_pCreateShadowShader	= nullptr;
 // 조명의 위치
 D3DXVECTOR4				g_WorldLightPosition(500.0f, 500.0f, -500.0f, 1.0f);
 // 카메라 위치
 D3DXVECTOR4				g_WorldCameraPosition(0.0f, 0.0f, -200.0f, 1.0f);
-// 텍스처
-LPDIRECT3DTEXTURE9		g_pStoneDM = nullptr;
-LPDIRECT3DTEXTURE9		g_pStoneSM = nullptr;
+// 그림자맵 렌더타겟(D3D의 텍스처)
+LPDIRECT3DTEXTURE9		g_pShadowRenderTarget	= nullptr;
+LPDIRECT3DSURFACE9		g_pShadowDepthStencil	= nullptr;
+// 물체의 색상
+D3DXVECTOR4				g_TorusColor(1.0f, 1.0f, 0.0f, 1.0f);
+D3DXVECTOR4				g_DiscColor(0.0f, 1.0f, 1.0f, 1.0f);
 // 빛의 색상
-D3DXVECTOR4				g_LightColor(0.7f, 0.7f, 1.0f, 1.0f);
+D3DXVECTOR4				g_LightColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 // 회전을 위한 회전값
 float g_RotationY = 0.0f;
@@ -93,70 +100,169 @@ void RenderFrame()
 // 3D 물체등을 그린다.
 void RenderScene()
 {
-	// 뷰 행렬을 만든다.
-	D3DXMATRIXA16			matView;
-	D3DXVECTOR3 vEyePt(g_WorldCameraPosition.x, g_WorldCameraPosition.y, g_WorldCameraPosition.z);			// 카메라의 위치
-	D3DXVECTOR3 vLookatPt(0.0f, 0.0f, 0.0f);			// 카메라가 바라보는 방향
-	D3DXVECTOR3 vUpVec(0.0f, 1.0f, 0.0f);			// 윗 방향이 어디인가. x:0, y:1, z:0
-	D3DXMatrixLookAtLH(&matView, &vEyePt, &vLookatPt, &vUpVec);
-
-	// 투영행렬을 만든다.
-	D3DXMATRIXA16			matProjection;
-	D3DXMatrixPerspectiveFovLH(&matProjection, FOV, ASPECT_RATIO, NEAR_PLANE, FAR_PLANE);
-
-
-	// 월드행렬을 만든다.
-	D3DXMATRIXA16			matWorld;
-	D3DXMatrixIdentity(&matWorld);
-
-	// 회전한다.
-	g_RotationY += 0.4f * PI / 180.0f;
-	if (g_RotationY > 2 * PI)
+	// 광원-뷰행렬
+	D3DXMATRIXA16			matLightView;
 	{
-		g_RotationY -= 2 * PI;
+		// 뷰 행렬을 만든다.
+		D3DXVECTOR3 vEyePt(g_WorldLightPosition.x, 
+			g_WorldLightPosition.y, 
+			g_WorldLightPosition.z);			// 카메라의 위치
+		D3DXVECTOR3 vLookatPt(0.0f, 0.0f, 0.0f);			// 카메라가 바라보는 방향
+		D3DXVECTOR3 vUpVec(0.0f, 1.0f, 0.0f);			// 윗 방향이 어디인가. x:0, y:1, z:0
+		D3DXMatrixLookAtLH(&matLightView, &vEyePt, &vLookatPt, &vUpVec);
 	}
-	D3DXMatrixRotationY(&matWorld, g_RotationY);
 
-	// 시스템 시간을 구한다.
-	ULONGLONG tick = GetTickCount64();
-
-	// 쉐이더 전역변수들을 설정
-	g_pUVAnimationShader->SetMatrix("g_WorldMatrix", &matWorld);
-	g_pUVAnimationShader->SetMatrix("g_ViewMatrix", &matView);
-	g_pUVAnimationShader->SetMatrix("g_ProjectionMatrix", &matProjection);
-
-	g_pUVAnimationShader->SetVector("g_WorldLightPosition", &g_WorldLightPosition);
-	g_pUVAnimationShader->SetVector("g_WorldCameraPosition", &g_WorldCameraPosition);
-
-	g_pUVAnimationShader->SetFloat("g_Time", tick / 1000.0f);
-	g_pUVAnimationShader->SetFloat("g_WaveHeight", 3.6f);			// 파도의 높이를 조절하기 위한 전역 변수 
-	g_pUVAnimationShader->SetFloat("g_Speed", 2.0f);				// 얼마나 파도가 빨리 치느냐
-	g_pUVAnimationShader->SetFloat("g_WaveFrequency", 10.0f);		// 얼마나 파도가 자주 일어나느냐
-	g_pUVAnimationShader->SetFloat("g_UVSpeed", 0.5f);				// 텍스처가 움직이는 속도
-
-	// 텍스처를 입힌다.
-	g_pUVAnimationShader->SetVector("g_LightColor", &g_LightColor);
-	g_pUVAnimationShader->SetTexture("DiffuseMap_Tex", g_pStoneDM);
-	g_pUVAnimationShader->SetTexture("SpecularMap_Tex", g_pStoneSM);
-
-
-	// 쉐이더를 시작한다.
-	// 앞으로 그릴 모든 물체에 이 쉐이더를 적용할 것이란 뜻
-	UINT numPasses = 0;
-	g_pUVAnimationShader->Begin(&numPasses, NULL);
+	// 광원-투영 생성
+	D3DXMATRIXA16			matLightProjection;
 	{
-		for (UINT i = 0; i < numPasses; ++i)
+		D3DXMatrixPerspectiveFovLH(&matLightProjection, D3DX_PI / 4.0f, 1, 1, 1000);
+	}
+
+	// 뷰-투영행렬
+	D3DXMATRIXA16			matViewProjection;
+	{
+		// 뷰 행렬을 만든다.
+		D3DXMATRIXA16		matView;
+		D3DXVECTOR3 vEyePt(g_WorldCameraPosition.x, g_WorldCameraPosition.y, g_WorldCameraPosition.z);			// 카메라의 위치
+		D3DXVECTOR3 vLookatPt(0.0f, 0.0f, 0.0f);			// 카메라가 바라보는 방향
+		D3DXVECTOR3 vUpVec(0.0f, 1.0f, 0.0f);			// 윗 방향이 어디인가. x:0, y:1, z:0
+		D3DXMatrixLookAtLH(&matView, &vEyePt, &vLookatPt, &vUpVec);
+
+		D3DXMATRIXA16 matProjection;
+		D3DXMatrixPerspectiveFovLH(&matProjection, FOV, ASPECT_RATIO, NEAR_PLANE, FAR_PLANE);
+
+		D3DXMatrixMultiply(&matViewProjection, &matView, &matProjection);
+	}
+
+	// 원환체의 월드 행렬 생성
+	D3DXMATRIXA16			matTorusWorld;
+	{
+		// 회전한다.
+		g_RotationY += 0.4f * PI / 180.0f;
 		{
-			g_pUVAnimationShader->BeginPass(i);
+			if (g_RotationY > 2 * PI)
 			{
-				// 구체를 그린다.
-				g_pTorus->DrawSubset(0);
+				g_RotationY -= 2 * PI;
 			}
-			g_pUVAnimationShader->EndPass();
+			D3DXMatrixRotationY(&matTorusWorld, g_RotationY);
 		}
 	}
-	// 이 쉐이더를 적용하는 것을 끝내라
-	g_pUVAnimationShader->End();
+
+	// 디스크의 월드 행렬을 만든다.
+	D3DXMATRIXA16			matDiscWorld;
+	{
+		D3DXMATRIXA16 matScale;
+		D3DXMatrixScaling(&matScale, 2, 2, 2);
+
+		D3DXMATRIXA16 matTrans;
+		D3DXMatrixTranslation(&matTrans, 0, -40, 0);
+
+		D3DXMatrixMultiply(&matDiscWorld, &matScale, &matTrans);
+	}
+
+	// 현재 하드웨어 백버퍼와 깊이버퍼
+	LPDIRECT3DSURFACE9 pHWBackBuffer = nullptr;
+	LPDIRECT3DSURFACE9 pHWDepthStencilBuffer = nullptr;
+	gpD3DDevice->GetRenderTarget(0, &pHWBackBuffer);
+	gpD3DDevice->GetDepthStencilSurface(&pHWDepthStencilBuffer);
+
+	////////////////////////////
+	//    1. 그림자 만들기	  //
+	////////////////////////////
+
+	// 그림자맵의 렌더타깃과 깊이 버퍼를 사용한다.
+	LPDIRECT3DSURFACE9 pShadowSurface = nullptr;
+	if (SUCCEEDED(g_pShadowRenderTarget->GetSurfaceLevel(0, &pShadowSurface)))
+	{
+		gpD3DDevice->SetRenderTarget(0, pShadowSurface);
+		pShadowSurface->Release();
+		pShadowSurface = nullptr;
+	}
+	gpD3DDevice->SetDepthStencilSurface(g_pShadowDepthStencil);
+
+	gpD3DDevice->Clear(0, nullptr, (D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER), 0xFFFFFFFF, 1.0f, 0);
+
+	g_pCreateShadowShader->SetMatrix("g_WorldMatrix", &matTorusWorld);
+	g_pCreateShadowShader->SetMatrix("g_LightViewMatrix", &matLightView);
+	g_pCreateShadowShader->SetMatrix("g_LightProjectionMatrix", &matLightProjection);
+
+	// 그림자 만들기 셰이더 시작
+	{
+		// 쉐이더를 시작한다.
+		// 앞으로 그릴 모든 물체에 이 쉐이더를 적용할 것이란 뜻
+		UINT numPasses = 0;
+		g_pCreateShadowShader->Begin(&numPasses, NULL);
+		{
+			for (UINT i = 0; i < numPasses; ++i)
+			{
+				g_pCreateShadowShader->BeginPass(i);
+				{
+					// 구체를 그린다.
+					g_pTorus->DrawSubset(0);
+				}
+				g_pCreateShadowShader->EndPass();
+			}
+		}
+		// 이 쉐이더를 적용하는 것을 끝내라
+		g_pCreateShadowShader->End();
+	}
+
+	////////////////////////////
+	//    2. 그림자 입히기	  //
+	////////////////////////////
+
+	// 하드웨어 백버퍼/깊이버퍼를 사용한다.
+	gpD3DDevice->SetRenderTarget(0, pHWBackBuffer);
+	gpD3DDevice->SetDepthStencilSurface(pHWDepthStencilBuffer);
+
+	// GPU 메모리 누수 방지
+	// D3D 자원들은 사용자가 직접 메모리를 할당/제거를 하지 않는다
+	// 그 대신 참조 카운트가 0으로 떨어진다면 D3D 내부에서 알아서 해제한다. (unique_ptr같은 것)
+	pHWBackBuffer->Release();
+	pHWBackBuffer = nullptr;
+	pHWDepthStencilBuffer->Release();
+	pHWDepthStencilBuffer = nullptr;
+
+	// 그림자 입히기 셰이더 전역변수들을 설정
+	g_pApplyShadowShader->SetMatrix("g_WorldMatrix", &matTorusWorld);
+	g_pApplyShadowShader->SetMatrix("g_ViewProjectionMatrix", &matViewProjection);
+	g_pApplyShadowShader->SetMatrix("g_LightViewMatrix", &matLightView);
+	g_pApplyShadowShader->SetMatrix("g_LightProjectionMatrix", & matLightProjection);
+
+	// 난반사용 전역변수 설정
+	g_pApplyShadowShader->SetVector("g_WorldLightPosition", &g_WorldLightPosition);
+	g_pApplyShadowShader->SetVector("g_ObjectColor", &g_TorusColor);
+
+	// 그림자를 입히기 위한 그림자맵
+	g_pApplyShadowShader->SetTexture("ShadowMap_Tex", g_pShadowRenderTarget);
+
+	{
+		// 쉐이더를 시작한다.
+		// 앞으로 그릴 모든 물체에 이 쉐이더를 적용할 것이란 뜻
+		UINT numPasses = 0;
+		g_pApplyShadowShader->Begin(&numPasses, NULL);
+		{
+			for (UINT i = 0; i < numPasses; ++i)
+			{
+				g_pApplyShadowShader->BeginPass(i);
+				{
+					// 구체를 그린다.
+					g_pTorus->DrawSubset(0);
+
+					// 디스크를 그린다.
+					g_pApplyShadowShader->SetMatrix("g_WorldMatrix", &matDiscWorld);
+					g_pApplyShadowShader->SetVector("g_ObjectColor", &g_DiscColor);
+
+					// BeginPass와 EndPass에서 전역변수를 변화시키려면 CommitChanges라는 함수를 호출해야한다.
+					g_pApplyShadowShader->CommitChanges();
+					g_pDisc->DrawSubset(0);
+				}
+				g_pApplyShadowShader->EndPass();
+			}
+		}
+		// 이 쉐이더를 적용하는 것을 끝내라
+		g_pApplyShadowShader->End();
+	}
 }
 
 // 디버그 정보 등을 출력.
@@ -183,6 +289,27 @@ bool InitEverything(HWND hWnd)
 {
 	// D3D를 초기화
 	if (!InitD3D(hWnd))
+	{
+		return false;
+	}
+
+	// 렌더 타깃 생성
+	const int shadowMapSize = 2048;
+
+	// 렌더 타깃 텍스처 생성
+	if (FAILED(gpD3DDevice->CreateTexture(shadowMapSize, shadowMapSize,
+		1, D3DUSAGE_RENDERTARGET, D3DFMT_R32F,
+		D3DPOOL_DEFAULT, &g_pShadowRenderTarget, nullptr)))
+	{
+		return false;
+	}
+
+	// 그림자맵과 동일한 크기의 깊이 버퍼를 만들어줘야 한다.
+	// D3DFMT_D24X8 : 깊이 버퍼로 24비트, 나머지 8비트는 버리기
+	// D3DMULTISAMPLE_NONE : 안티앨리어싱 사용 안 함
+	if (FAILED(gpD3DDevice->CreateDepthStencilSurface(shadowMapSize, shadowMapSize,
+		D3DFMT_D24X8, D3DMULTISAMPLE_NONE, 0, TRUE,
+		&g_pShadowDepthStencil, nullptr)))
 	{
 		return false;
 	}
@@ -247,28 +374,27 @@ bool InitD3D(HWND hWnd)
 bool LoadAssets()
 {
 	// 쉐이더 로딩
-	g_pUVAnimationShader = LoadShader("UV_Animation.fx");
-	if (!g_pUVAnimationShader)
+	g_pCreateShadowShader = LoadShader("CreateShadow.fx");
+	if (!g_pCreateShadowShader)
+	{
+		return false;
+	}
+
+	g_pApplyShadowShader = LoadShader("ApplyShadow.fx");
+	if (!g_pApplyShadowShader)
 	{
 		return false;
 	}
 
 	// 모델 로딩
+	g_pDisc = LoadModel("Disc.x");
+	if (!g_pDisc)
+	{
+		return false;
+	}
+
 	g_pTorus = LoadModel("Torus.x");
 	if (!g_pTorus)
-	{
-		return false;
-	}
-
-	// 텍스처 로딩
-	g_pStoneSM = LoadTexture("fieldstone_SM.tga");
-	if (!g_pStoneSM)
-	{
-		return false;
-	}
-
-	g_pStoneDM = LoadTexture("Fieldstone_DM.tga");
-	if (!g_pStoneDM)
 	{
 		return false;
 	}
@@ -353,6 +479,12 @@ void Cleanup()
 	}
 
 	// 모델을 release 한다.
+	if (g_pDisc)
+	{
+		g_pDisc->Release();
+		g_pDisc = nullptr;
+	}
+
 	if (g_pTorus)
 	{
 		g_pTorus->Release();
@@ -360,23 +492,29 @@ void Cleanup()
 	}
 
 	// 쉐이더를 release 한다.
-	if (g_pUVAnimationShader)
+	if (g_pCreateShadowShader)
 	{
-		g_pUVAnimationShader->Release();
-		g_pUVAnimationShader = nullptr;
+		g_pCreateShadowShader->Release();
+		g_pCreateShadowShader = nullptr;
+	}
+
+	if (g_pApplyShadowShader)
+	{
+		g_pApplyShadowShader->Release();
+		g_pApplyShadowShader = nullptr;
 	}
 
 	// 텍스처를 release 한다.
-	if (g_pStoneDM)
+	if (g_pShadowRenderTarget)
 	{
-		g_pStoneDM->Release();
-		g_pStoneDM = nullptr;
+		g_pShadowRenderTarget->Release();
+		g_pShadowRenderTarget = nullptr;
 	}
 
-	if (g_pStoneSM)
+	if (g_pShadowDepthStencil)
 	{
-		g_pStoneSM->Release();
-		g_pStoneSM = nullptr;
+		g_pShadowDepthStencil->Release();
+		g_pShadowDepthStencil = nullptr;
 	}
 
 	// D3D를 release 한다.
